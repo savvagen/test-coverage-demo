@@ -1,0 +1,130 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.72'
+    id "io.qameta.allure" version "2.7.0"
+    id "io.freefair.lombok" version "5.0.1"
+}
+
+ext {
+    restAssuredVersion = "4.2.0"
+    jaksonCoreVersion = '2.9.6'
+    lombokVersion = "1.18.12"
+    swaggerCoverageLatestVersion = "1.2.0"
+    petstoreSwagger = "swagger/petstore-swagger.json"
+}
+
+sourceCompatibility = "1.8"
+targetCompatibility = "1.8"
+
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.13'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compile group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.6.2'
+    // Test Engine
+    compile group: 'io.qameta.atlas', name: 'atlas-webdriver', version: '1.8.0'
+    compile("io.github.bonigarcia:webdrivermanager:3.8.1")
+
+    // Assertion Libraries
+    compile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
+    compile group: 'org.assertj', name: 'assertj-core', version: '3.15.0'
+    compile group: 'org.easytesting', name: 'fest-assert', version: '1.4'
+    // Reporting
+    compile group: 'io.qameta.allure', name: 'allure-junit5', version: '2.13.3'
+    compile group: 'io.qameta.allure', name: 'allure-rest-assured', version: '2.13.3'
+    compile group: 'io.qameta.allure', name: 'allure-assertj', version: '2.13.3'
+    compile group: 'io.qameta.allure', name: 'allure-junit5-assert', version: '2.13.3'
+
+    // Lombok
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+    testCompileOnly "org.projectlombok:lombok:$lombokVersion"
+    testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
+    // Logger
+    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.8.0-beta4'
+    compile group: 'ch.qos.logback', name: 'logback-core', version: '1.2.3'
+    // Swagger coverage
+    compile group: 'com.github.viclovsky.swagger.coverage', name: 'swagger-coverage-rest-assured', version: "${swaggerCoverageLatestVersion}"
+    compile group: 'org.aeonbits.owner', name: 'owner', version: '1.0.11'
+
+
+    implementation 'org.seleniumhq.selenium:selenium-java:3.141.59'
+    implementation 'ru.yandex.qatools.matchers:webdriver-matchers:1.4.1'
+    implementation 'ru.yandex.qatools.matchers:matcher-decorators:1.4.1'
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+
+allure {
+    version = '2.7.0'
+    autoconfigure = true
+    configuration = 'compile'
+    aspectjweaver = true
+    aspectjVersion = '1.8.10'
+    resultsDir = file("${rootDir}/build/allure-results")
+    reportDir = file("${rootDir}/allure-report")
+    useJUnit5 {
+        version = '2.0-BETA10'
+    }
+}
+
+
+
+import io.qameta.allure.gradle.task.AllureReport
+task allureAggregatedReport(type: AllureReport) {
+    allure.resultsDir
+}
+
+test {
+    useJUnitPlatform{
+        includeTags 'propeller'
+        excludeTags 'gmail'
+        // excludeTags 'slow', 'ci'
+        includeEngines 'junit-jupiter'
+        //excludeEngines 'junit-vintage'
+    }
+    failFast = true
+    testLogging {
+        showStandardStreams = true
+        events 'PASSED', 'FAILED', 'SKIPPED'
+    }
+    afterSuite { desc, result ->
+        if (!desc.parent) {
+            println "\nTest result: ${result.resultType}"
+            println "Test summary: ${result.testCount} tests, " +
+                    "${result.successfulTestCount} succeeded, " +
+                    "${result.failedTestCount} failed, " +
+                    "${result.skippedTestCount} skipped"
+        }
+    }
+    //System variables and properties
+    // ...
+    systemProperty 'junit.jupiter.conditions.deactivate', '*'
+    systemProperties = [
+            'junit.jupiter.extensions.autodetection.enabled': 'true',
+            'junit.jupiter.testinstance.lifecycle.default' : 'per_class',
+    ]
+    // Also you can configure this properties in /src/test/resource/junit-platform.properties file
+    // ...
+}.finalizedBy allureAggregatedReport
+
+clean.doFirst {
+    delete "${rootDir}/.allure"
+    delete "${rootDir}/allure-results"
+    delete "${rootDir}/allure-report"
+    delete "${rootDir}/bin"
+    delete "${rootDir}/build"
+    delete "${rootDir}/out"
+
+}

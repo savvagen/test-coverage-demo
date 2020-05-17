@@ -1,0 +1,11 @@
+.idea
+.gradle
+/out
+/build
+coverage_api/.gradle
+coverage_api/.build
+coverage_api/out
+coverage_ui/.gradle
+coverage_ui/build
+coverage_ui/out
+

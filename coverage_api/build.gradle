@@ -1,0 +1,131 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.72'
+    id "io.qameta.allure" version "2.7.0"
+    id "io.freefair.lombok" version "5.0.1"
+    id "de.undercouch.download" version "1.2"
+}
+
+ext {
+    restAssuredVersion = "4.2.0"
+    jaksonCoreVersion = '2.9.6'
+    lombokVersion = "1.18.12"
+    swaggerCoverageLatestVersion = "1.2.0"
+    petstoreSwagger = "swagger/petstore-swagger.json"
+}
+
+sourceCompatibility = "1.8"
+targetCompatibility = "1.8"
+
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/viclovsky/maven'
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    compile group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.6.2'
+    // Test Engine
+    implementation([
+            "io.rest-assured:rest-assured:$restAssuredVersion",
+            "io.rest-assured:rest-assured-all:$restAssuredVersion",
+            "io.rest-assured:json-path:$restAssuredVersion",
+            "io.rest-assured:json-schema-validator:$restAssuredVersion"
+    ])
+    // Json and Data Generation
+    compile(
+            ['org.json:json:20190722'],
+            ["com.fasterxml.jackson.core:jackson-databind:$jaksonCoreVersion"],
+            ["com.fasterxml.jackson.core:jackson-core:$jaksonCoreVersion"],
+            ["com.google.code.gson:gson:2.8.6"],
+            ["com.github.javafaker:javafaker:1.0.2"]
+    )
+    // Assertion Libraries
+    testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
+    testCompile group: 'org.assertj', name: 'assertj-core', version: '3.15.0'
+    testCompile group: 'org.easytesting', name: 'fest-assert', version: '1.4'
+    // Reporting
+    compile group: 'io.qameta.allure', name: 'allure-junit5', version: '2.13.3'
+    compile group: 'io.qameta.allure', name: 'allure-rest-assured', version: '2.13.3'
+    compile group: 'io.qameta.allure', name: 'allure-assertj', version: '2.13.3'
+
+    // Lombok
+    compileOnly "org.projectlombok:lombok:$lombokVersion"
+    annotationProcessor "org.projectlombok:lombok:$lombokVersion"
+    testCompileOnly "org.projectlombok:lombok:$lombokVersion"
+    testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
+    // Logger
+    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.8.0-beta4'
+    compile group: 'ch.qos.logback', name: 'logback-core', version: '1.2.3'
+    // Swagger coverage
+    compile group: 'com.github.viclovsky.swagger.coverage', name: 'swagger-coverage-rest-assured', version: "${swaggerCoverageLatestVersion}"
+    compile group: 'org.aeonbits.owner', name: 'owner', version: '1.0.11'
+
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+
+allure {
+    version = '2.7.0'
+    autoconfigure = true
+    configuration = 'compile'
+    aspectjweaver = true
+    aspectjVersion = '1.8.10'
+    resultsDir = file("${rootDir}/build/allure-results")
+    reportDir = file("${rootDir}/allure-report")
+    useJUnit5 {
+        version = '2.0-BETA10'
+    }
+}
+
+
+
+import io.qameta.allure.gradle.task.AllureReport
+task allureAggregatedReport(type: AllureReport) {
+    allure.resultsDir
+}
+
+test {
+    useJUnitPlatform()
+}.finalizedBy allureAggregatedReport
+
+
+import de.undercouch.gradle.tasks.download.Download
+task downloadSwaggerCoverage(type: Download){
+    src " https://dl.bintray.com/viclovsky/maven/com/github/viclovsky/swagger/coverage/swagger-coverage-commandline/${swaggerCoverageLatestVersion}/swagger-coverage-commandline-${swaggerCoverageLatestVersion}.zip"
+    dest "swagger-coverage-${swaggerCoverageLatestVersion}.zip"
+    doLast {
+        exec {
+            commandLine 'sh', '-c', "unzip swagger-coverage-${swaggerCoverageLatestVersion}.zip -x &&" +
+                    "mv swagger-coverage-commandline-$swaggerCoverageLatestVersion swagger-coverage-$swaggerCoverageLatestVersion &&" +
+                    "./swagger-coverage-$swaggerCoverageLatestVersion/bin/swagger-coverage-commandline -s $petstoreSwagger -i swagger-coverage-output"
+            //"rm -r gatling-${gatlingVersion}.zip"
+        }
+    }
+}
+
+clean.doFirst {
+    delete "${rootDir}/.allure"
+    delete "${rootDir}/allure-results"
+    delete "${rootDir}/allure-report"
+    delete "${rootDir}/bin"
+    delete "${rootDir}/build"
+    delete "${rootDir}/out"
+    delete "${rootDir}/swagger-coverage-output"
+    delete "${rootDir}/swagger-coverage-${swaggerCoverageLatestVersion}"
+    delete "${rootDir}/swagger-coverage-${swaggerCoverageLatestVersion}.zip"
+    delete "${rootDir}/swagger-coverage-report.html"
+    //delete "${rootDir}/swagger-coverage-results.json"
+    delete "${rootDir}/swagger-coverage-1.2.0.zip"
+
+}
